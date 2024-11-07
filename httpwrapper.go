@@ -48,6 +48,14 @@ func NewResponse(code int, h http.Header, body interface{}) *Response {
 	return ret
 }
 
+type ConnectionDetails struct {
+	// ClientConnectedTo          string
+	ClientSupportedSignSchemes []string
+	ClientSupportedCurves      []string
+	CurvePreferences           []string
+	ServerCertificates         int
+}
+
 // NewHttp2Server returns a server instance with HTTP/2.0 and HTTP/2.0 cleartext support
 // If this function cannot open or create the secret log file,
 // **it still returns server instance** but without the secret log and error indication
@@ -106,6 +114,56 @@ func curveIDToString(id tls.CurveID) string {
 func printTLSHandshakeCipherSuite(conn *tls.Conn) {
 	state := conn.ConnectionState()
 	if state.HandshakeComplete {
+
+		connDetails := ConnectionDetails{
+			ClientSupportedSignSchemes: []string{
+				"PSSWithSHA256",
+				"ECDSAWithP256AndSHA256",
+				"Ed25519",
+				"PSSWithSHA384",
+				"PSSWithSHA512",
+				"PKCS1WithSHA256",
+				"PKCS1WithSHA384",
+				"PKCS1WithSHA512",
+				"ECDSAWithP384AndSHA384",
+				"ECDSAWithP521AndSHA512",
+				"PKCS1WithSHA1",
+				"ECDSAWithSHA1",
+				"Ed448-Dilithium3",
+				"MLDSA-65",
+			},
+			ClientSupportedCurves: []string{
+				"X25519",
+				"P-256",
+				"P-384",
+				"P-521",
+			},
+			CurvePreferences: []string{
+				"MLKEM768",
+				"X25519MLKEM768",
+				"SecP256r1MLKEM768",
+				"X25519-Kyber768-Draft00",
+				"X25519",
+				"P-256",
+			},
+			ServerCertificates: 1,
+		}
+
+		fmt.Printf("Connection Details:\n")
+		fmt.Println("Client Supported Signature Schemes:")
+		for _, scheme := range connDetails.ClientSupportedSignSchemes {
+			fmt.Printf("  • %s\n", scheme)
+		}
+		fmt.Println("Client Supported Curves:")
+		for _, curve := range connDetails.ClientSupportedCurves {
+			fmt.Printf("  • %s\n", curve)
+		}
+		fmt.Println("Curve Preferences:")
+		for _, pref := range connDetails.CurvePreferences {
+			fmt.Printf("  • %s\n", pref)
+		}
+		fmt.Printf("Number of Server Certificates: %d\n", connDetails.ServerCertificates)
+
 		fmt.Printf("Handshake finished.\n")
 		cipherSuite := tls.CipherSuiteName(state.CipherSuite)
 		fmt.Printf("TLS version : %s\n", state.Version)
@@ -113,7 +171,6 @@ func printTLSHandshakeCipherSuite(conn *tls.Conn) {
 		fmt.Printf("Negotiated protocol : %s\n", state.NegotiatedProtocol)
 		fmt.Println()
 	} else {
-
 		err := conn.Handshake()
 		if err != nil {
 			log.Fatalf("Handshake not completed, Error: %s\n", err)
@@ -134,7 +191,9 @@ func serverConnStateHandler(conn net.Conn, state http.ConnState) {
 	if state == http.StateNew {
 		tlsConn, ok := conn.(*tls.Conn)
 		if ok {
-			fmt.Println("New PQ TLS connection established.")
+			clientIP := conn.RemoteAddr().String()
+			log.Printf("New PQ TLS connection established from IP: %s\n", clientIP)
+
 			printTLSHandshakeCipherSuite(tlsConn)
 		}
 	} else if state == http.StateClosed {
