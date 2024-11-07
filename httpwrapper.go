@@ -115,7 +115,22 @@ func printTLSHandshakeCipherSuite(conn *tls.Conn) {
 	state := conn.ConnectionState()
 	if state.HandshakeComplete {
 
-		connDetails := ConnectionDetails{
+		fmt.Println("Done")
+		
+	} else {
+		err := conn.Handshake()
+		if err != nil {
+			log.Fatalf("Handshake not completed, Error: %s\n", err)
+		} else {
+
+			state := conn.ConnectionState()
+				
+			log.Println("Handshake done, Error: nil.")
+			cipherSuite := tls.CipherSuiteName(state.CipherSuite)
+			fmt.Printf("TLS version : %d\n", state.Version)
+			fmt.Printf("Cipher Suite chosen : %s\n", cipherSuite)
+			fmt.Printf("Negotiated protocol : %s\n", state.NegotiatedProtocol)
+			connDetails := ConnectionDetails{
 			ClientSupportedSignSchemes: []string{
 				"PSSWithSHA256",
 				"ECDSAWithP256AndSHA256",
@@ -170,19 +185,6 @@ func printTLSHandshakeCipherSuite(conn *tls.Conn) {
 		fmt.Printf("Cipher Suite chosen : %s\n", cipherSuite)
 		fmt.Printf("Negotiated protocol : %s\n", state.NegotiatedProtocol)
 		fmt.Println()
-	} else {
-		err := conn.Handshake()
-		if err != nil {
-			log.Fatalf("Handshake not completed, Error: %s\n", err)
-		} else {
-
-			state := conn.ConnectionState()
-
-			log.Println("Handshake done, Error: nil.")
-			cipherSuite := tls.CipherSuiteName(state.CipherSuite)
-			fmt.Printf("TLS version : %d\n", state.Version)
-			fmt.Printf("Cipher Suite chosen : %s\n", cipherSuite)
-			fmt.Printf("Negotiated protocol : %s\n", state.NegotiatedProtocol)
 		}
 	}
 }
