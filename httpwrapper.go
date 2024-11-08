@@ -180,9 +180,9 @@ func printTLSHandshakeCipherSuite(conn *tls.Conn) {
 		fmt.Printf("Number of Server Certificates: %d\n", connDetails.ServerCertificates)
 
 		fmt.Printf("Handshake finished.\n")
-		cipherSuite := tls.CipherSuiteName(state.CipherSuite)
+		cipherSuiteChosen := tls.CipherSuiteName(state.CipherSuite)
 		//fmt.Printf("TLS version : %s\n", state.Version)
-		fmt.Printf("Cipher Suite chosen : %s\n", cipherSuite)
+		fmt.Printf("Cipher Suite chosen : %s\n", cipherSuiteChosen)
 		fmt.Printf("Negotiated protocol : %s\n", state.NegotiatedProtocol)
 		fmt.Println()
 		}
