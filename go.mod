@@ -1,4 +1,4 @@
-module httpwrapper
+module github.com/lakshya-chopra/httpwrapper
 
 go 1.23.0
 
