@@ -74,9 +74,7 @@ func NewHttp2Server(
 			for _, cert := range certs {
 				if err := chi.SupportsCertificate(&cert); err == nil {
 					return &cert, nil
-				}
-				else {
-			// Log why the certificate was rejected
+				}else {
 			fmt.Fprintf(os.Stderr, "[TLS DEBUG] Certificate rejected: %v\n", err)
 				}
 
