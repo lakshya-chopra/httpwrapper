@@ -82,6 +82,16 @@ func NewHttp2Server(bindAddr string, preMasterSecretLogPath string, handler http
 			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
 	}
 	
+	tlsConfig.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		for _, cert := range certs {
+			if err := chi.SupportsCertificate(&cert); err == nil {
+				return &cert, nil
+			}
+		}
+		return nil, fmt.Errorf("no compatible certificate found for client")
+	}
+
+
 	server.TLSConfig = tlsConfig
 
 	return server, nil
