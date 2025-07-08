@@ -62,26 +62,27 @@ func NewHttp2Server(bindAddr string, preMasterSecretLogPath string, handler http
 		Handler: h2c.NewHandler(handler, h2Server),
 	}
 
+	tlsConfig := &tls.Config{
+		PQSignatureSchemesEnabled: true,
+	}
+
 	if preMasterSecretLogPath != "" {
 		preMasterSecretFile, err := os.OpenFile(preMasterSecretLogPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 		if err != nil {
 			return nil, fmt.Errorf("create pre-master-secret log [%s] fail: %s", preMasterSecretLogPath, err)
 		}
-		tlsConfig := &tls.Config{
-			KeyLogWriter: preMasterSecretFile,
-			PQSignatureSchemesEnabled: true,
-		}
-
-		for _, pair := range certKeyPaths {
-			cert, err := tls.LoadX509KeyPair(pair.Cert, pair.Key)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load cert [%s] or key [%s]: %v", pair.Cert, pair.Key, err)
-			}
-			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
-		}
-	
-		server.TLSConfig = tlsConfig
+		tlsConfig.KeyLogWriter = preMasterSecretFile
 	}
+	
+	for _, pair := range certKeyPaths {
+		cert, err := tls.LoadX509KeyPair(pair.Cert, pair.Key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load cert [%s] or key [%s]: %v", pair.Cert, pair.Key, err)
+		}
+			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+	}
+	
+	server.TLSConfig = tlsConfig
 
 	return server, nil
 }
