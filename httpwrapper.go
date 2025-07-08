@@ -48,7 +48,7 @@ func NewResponse(code int, h http.Header, body interface{}) *Response {
 // NewHttp2Server returns a server instance with HTTP/2.0 and HTTP/2.0 cleartext support
 // If this function cannot open or create the secret log file,
 // **it still returns server instance** but without the secret log and error indication
-func NewHttp2Server(bindAddr string, preMasterSecretLogPath string, handler http.Handler) (*http.Server, error) {
+func NewHttp2Server(bindAddr string, preMasterSecretLogPath string, handler http.Handler, certKeyPaths []struct{Cert, Key string },) (*http.Server, error) {
 	if handler == nil {
 		return nil, errors.New("server needs handler to handle request")
 	}
@@ -67,10 +67,20 @@ func NewHttp2Server(bindAddr string, preMasterSecretLogPath string, handler http
 		if err != nil {
 			return nil, fmt.Errorf("create pre-master-secret log [%s] fail: %s", preMasterSecretLogPath, err)
 		}
-		server.TLSConfig = &tls.Config{
+		tlsConfig := &tls.Config{
 			KeyLogWriter: preMasterSecretFile,
 			PQSignatureSchemesEnabled: true,
 		}
+
+		for _, pair := range certKeyPaths {
+			cert, err := tls.LoadX509KeyPair(pair.Cert, pair.Key)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load cert [%s] or key [%s]: %v", pair.Cert, pair.Key, err)
+			}
+			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+		}
+	
+		server.TLSConfig = tlsConfig
 	}
 
 	return server, nil
