@@ -48,24 +48,39 @@ func NewResponse(code int, h http.Header, body interface{}) *Response {
 // NewHttp2Server returns a server instance with HTTP/2.0 and HTTP/2.0 cleartext support
 // If this function cannot open or create the secret log file,
 // **it still returns server instance** but without the secret log and error indication
-func NewHttp2Server(bindAddr string, preMasterSecretLogPath string, handler http.Handler, certKeyPaths []struct{Cert, Key string },) (*http.Server, error) {
+func NewHttp2Server(
+	bindAddr string,
+	preMasterSecretLogPath string,
+	handler http.Handler,
+	certKeyPaths []struct{ Cert, Key string },
+) (*http.Server, error) {
 	if handler == nil {
 		return nil, errors.New("server needs handler to handle request")
 	}
 
-	h2Server := &http2.Server{
-		// TODO: extends the idle time after re-use openapi client
-		IdleTimeout: 1 * time.Millisecond,
-	}
-	server := &http.Server{
-		Addr:    bindAddr,
-		Handler: h2c.NewHandler(handler, h2Server),
+	var certs []tls.Certificate
+	for _, pair := range certKeyPaths {
+		cert, err := tls.LoadX509KeyPair(pair.Cert, pair.Key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load cert [%s] or key [%s]: %v", pair.Cert, pair.Key, err)
+		}
+		certs = append(certs, cert)
 	}
 
 	tlsConfig := &tls.Config{
 		PQSignatureSchemesEnabled: true,
+		Certificates:              certs,
+		GetCertificate: func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
+			for _, cert := range certs {
+				if err := chi.SupportsCertificate(&cert); err == nil {
+					return &cert, nil
+				}
+			}
+			return nil, fmt.Errorf("no compatible certificate found for client")
+		},
 	}
 
+	// pre-master key log file
 	if preMasterSecretLogPath != "" {
 		preMasterSecretFile, err := os.OpenFile(preMasterSecretLogPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 		if err != nil {
@@ -73,27 +88,14 @@ func NewHttp2Server(bindAddr string, preMasterSecretLogPath string, handler http
 		}
 		tlsConfig.KeyLogWriter = preMasterSecretFile
 	}
-	
-	for _, pair := range certKeyPaths {
-		cert, err := tls.LoadX509KeyPair(pair.Cert, pair.Key)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load cert [%s] or key [%s]: %v", pair.Cert, pair.Key, err)
-		}
-			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
-	}
-	
-	tlsConfig.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
-		for _, cert := range certs {
-			if err := chi.SupportsCertificate(&cert); err == nil {
-				return &cert, nil
-			}
-		}
-		return nil, fmt.Errorf("no compatible certificate found for client")
-	}
 
+	h2Server := &http2.Server{IdleTimeout: 1 * time.Millisecond}
 
-	server.TLSConfig = tlsConfig
+	server := &http.Server{
+		Addr:      bindAddr,
+		Handler:   h2c.NewHandler(handler, h2Server),
+		TLSConfig: tlsConfig,
+	}
 
 	return server, nil
 }
-
