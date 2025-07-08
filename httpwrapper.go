@@ -66,16 +66,18 @@ func NewHttp2Server(
 		}
 		certs = append(certs, cert)
 	}
+	fmt.Printf("Number of certificates: %d", len(certs))
 
 	tlsConfig := &tls.Config{
 		PQSignatureSchemesEnabled: true,
 		Certificates:              certs,
 		GetCertificate: func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
-			for _, cert := range certs {
+			count := 0
+			for i, cert := range certs {
 				if err := chi.SupportsCertificate(&cert); err == nil {
 					return &cert, nil
 				}else {
-			fmt.Fprintf(os.Stderr, "[TLS DEBUG] Certificate rejected: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[TLS DEBUG] %d Certificate rejected: %v\n",i, err)
 				}
 
 			}
