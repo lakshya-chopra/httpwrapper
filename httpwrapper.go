@@ -75,6 +75,11 @@ func NewHttp2Server(
 				if err := chi.SupportsCertificate(&cert); err == nil {
 					return &cert, nil
 				}
+				else {
+			// Log why the certificate was rejected
+			fmt.Fprintf(os.Stderr, "[TLS DEBUG] Certificate rejected: %v\n", err)
+				}
+
 			}
 			return nil, fmt.Errorf("no compatible certificate found for client")
 		},
