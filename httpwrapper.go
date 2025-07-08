@@ -72,7 +72,6 @@ func NewHttp2Server(
 		PQSignatureSchemesEnabled: true,
 		Certificates:              certs,
 		GetCertificate: func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
-			count := 0
 			for i, cert := range certs {
 				if err := chi.SupportsCertificate(&cert); err == nil {
 					return &cert, nil
